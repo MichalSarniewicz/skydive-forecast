@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Infrastructure
+  postgres-user:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-user-data:/var/lib/postgresql/data
+
+  postgres-location:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: locationdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-location-data:/var/lib/postgresql/data
+
+  postgres-forecast:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: forecastdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-forecast-data:/var/lib/postgresql/data
+
+  postgres-notification:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: notificationdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-notification-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # Microservices (for local runs)
+  # gateway:
+  #   build: ../skydive-forecast-gateway
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - user-service
+  #     - location-service
+
+  # user-service:
+  #   build: ../skydive-forecast-user-service
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/userdb
+
+volumes:
+  postgres-user-data:
+  postgres-location-data:
+  postgres-forecast-data:
+  postgres-notification-data:
