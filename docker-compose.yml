@@ -1,92 +1,260 @@
 version: '3.8'
 
 services:
-  # Infrastructure
   postgres-user:
     image: postgres:15-alpine
+    container_name: skydive-postgres-user
     environment:
-      POSTGRES_DB: userdb
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: skydive_forecast_user_db
+      POSTGRES_USER: skydive_forecast_user
+      POSTGRES_PASSWORD: pass
     ports:
       - "5432:5432"
     volumes:
       - postgres-user-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skydive_forecast_user -d skydive_forecast_user_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skydive-network
 
-  postgres-location:
+  postgres-analysis:
     image: postgres:15-alpine
+    container_name: skydive-postgres-analysis
     environment:
-      POSTGRES_DB: locationdb
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: skydive_forecast_analysis_db
+      POSTGRES_USER: skydive_forecast_analysis
+      POSTGRES_PASSWORD: pass
     ports:
       - "5433:5432"
     volumes:
-      - postgres-location-data:/var/lib/postgresql/data
+      - postgres-analysis-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skydive_forecast_analysis -d skydive_forecast_analysis_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skydive-network
 
-  postgres-forecast:
+  postgres-location:
     image: postgres:15-alpine
+    container_name: skydive-postgres-location
     environment:
-      POSTGRES_DB: forecastdb
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: skydive_forecast_location_db
+      POSTGRES_USER: skydive_forecast_location
+      POSTGRES_PASSWORD: pass
     ports:
       - "5434:5432"
     volumes:
-      - postgres-forecast-data:/var/lib/postgresql/data
-
-  postgres-notification:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: notificationdb
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5435:5432"
-    volumes:
-      - postgres-notification-data:/var/lib/postgresql/data
+      - postgres-location-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skydive_forecast_location -d skydive_forecast_location_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skydive-network
 
   redis:
     image: redis:7-alpine
+    container_name: skydive-redis
+    command: redis-server --requirepass pass --appendonly yes
     ports:
       - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "pass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skydive-network
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: skydive-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - skydive-network
 
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: skydive-kafka
     depends_on:
       - zookeeper
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - skydive-network
 
-  # Microservices (for local runs)
-  # gateway:
-  #   build: ../skydive-forecast-gateway
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     - user-service
-  #     - location-service
+  gateway:
+    build:
+      context: ./skydive-forecast-gateway
+      dockerfile: Dockerfile
+    container_name: skydive-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[0].URI: http://user-service:8081
+      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[1].URI: http://analysis-service:8082
+      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[2].URI: http://location-service:8083
+      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[3].URI: http://user-service:8081
+      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[4].URI: http://analysis-service:8082
+      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[5].URI: http://location-service:8083
+    depends_on:
+      user-service:
+        condition: service_healthy
+      analysis-service:
+        condition: service_healthy
+      location-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - skydive-network
 
-  # user-service:
-  #   build: ../skydive-forecast-user-service
-  #   ports:
-  #     - "8081:8081"
-  #   environment:
-  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/userdb
+  user-service:
+    build:
+      context: ./skydive-forecast-user-service
+      dockerfile: Dockerfile
+    container_name: skydive-user-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/skydive_forecast_user_db
+      SPRING_DATASOURCE_USERNAME: skydive_forecast_user
+      SPRING_DATASOURCE_PASSWORD: pass
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: skydive_forecast_user
+      SPRING_LIQUIBASE_DEFAULT_SCHEMA: skydive_forecast_user
+      SPRING_LIQUIBASE_CONTEXTS: seed
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - skydive-network
+
+  analysis-service:
+    build:
+      context: ./skydive-forecast-analysis-service
+      dockerfile: Dockerfile
+    container_name: skydive-analysis-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/skydive_forecast_analysis_db
+      SPRING_DATASOURCE_USERNAME: skydive_forecast_analysis
+      SPRING_DATASOURCE_PASSWORD: pass
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: skydive_forecast_analysis
+      SPRING_LIQUIBASE_DEFAULT_SCHEMA: skydive_forecast_analysis
+      SPRING_LIQUIBASE_CONTEXTS: seed
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: pass
+      SPRING_DATA_REDIS_TIMEOUT: 2000ms
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      LOCATION_SERVICE_URL: http://location-service:8083
+      JWT_SECRET: hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ
+      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_MYSERVICE_SLIDINGWINDOWSIZE: 10
+      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_MYSERVICE_FAILURERATETHRESHOLD: 50
+      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_MYSERVICE_WAITDURATIONINOPENSTATE: 100
+    depends_on:
+      postgres-analysis:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - skydive-network
+
+  location-service:
+    build:
+      context: ./skydive-forecast-location-service
+      dockerfile: Dockerfile
+    container_name: skydive-location-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-location:5432/skydive_forecast_location_db
+      SPRING_DATASOURCE_USERNAME: skydive_forecast_location
+      SPRING_DATASOURCE_PASSWORD: pass
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: skydive_forecast_location
+      SPRING_LIQUIBASE_DEFAULT_SCHEMA: skydive_forecast_location
+      SPRING_LIQUIBASE_CONTEXTS: seed
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: pass
+      SPRING_DATA_REDIS_TIMEOUT: 2000ms
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ
+    depends_on:
+      postgres-location:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - skydive-network
+
+networks:
+  skydive-network:
+    driver: bridge
 
 volumes:
   postgres-user-data:
+  postgres-analysis-data:
   postgres-location-data:
-  postgres-forecast-data:
-  postgres-notification-data:
+  redis-data:
