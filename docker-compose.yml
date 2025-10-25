@@ -10,7 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres-user-data:/var/lib/postgresql/data
-      - ./skydive-forecast-user-service/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../skydive-forecast-user-service/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U skydive_forecast_user -d skydive_forecast_user_db"]
@@ -31,7 +31,7 @@ services:
       - "5433:5432"
     volumes:
       - postgres-analysis-data:/var/lib/postgresql/data
-      - ./skydive-forecast-analysis-service/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../skydive-forecast-analysis-service/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U skydive_forecast_analysis -d skydive_forecast_analysis_db"]
       interval: 10s
@@ -51,7 +51,7 @@ services:
       - "5434:5432"
     volumes:
       - postgres-location-data:/var/lib/postgresql/data
-      - ./skydive-forecast-location-service/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../skydive-forecast-location-service/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U skydive_forecast_location -d skydive_forecast_location_db"]
       interval: 10s
@@ -113,7 +113,7 @@ services:
 
   gateway:
     build:
-      context: ./skydive-forecast-gateway
+      context: ../skydive-forecast-gateway
       dockerfile: Dockerfile
     container_name: skydive-gateway
     ports:
@@ -144,7 +144,7 @@ services:
 
   user-service:
     build:
-      context: ./skydive-forecast-user-service
+      context: ../skydive-forecast-user-service
       dockerfile: Dockerfile
     container_name: skydive-user-service
     ports:
@@ -175,7 +175,7 @@ services:
 
   analysis-service:
     build:
-      context: ./skydive-forecast-analysis-service
+      context: ../skydive-forecast-analysis-service
       dockerfile: Dockerfile
     container_name: skydive-analysis-service
     ports:
@@ -216,7 +216,7 @@ services:
 
   location-service:
     build:
-      context: ./skydive-forecast-location-service
+      context: ../skydive-forecast-location-service
       dockerfile: Dockerfile
     container_name: skydive-location-service
     ports:
