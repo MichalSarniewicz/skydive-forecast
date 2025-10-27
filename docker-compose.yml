@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: skydive_forecast_user
       POSTGRES_PASSWORD: pass
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - postgres-user-data:/var/lib/postgresql/data
       - ../skydive-forecast-user-service/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -28,7 +28,7 @@ services:
       POSTGRES_USER: skydive_forecast_analysis
       POSTGRES_PASSWORD: pass
     ports:
-      - "5433:5432"
+      - "15433:5432"
     volumes:
       - postgres-analysis-data:/var/lib/postgresql/data
       - ../skydive-forecast-analysis-service/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -48,7 +48,7 @@ services:
       POSTGRES_USER: skydive_forecast_location
       POSTGRES_PASSWORD: pass
     ports:
-      - "5434:5432"
+      - "15434:5432"
     volumes:
       - postgres-location-data:/var/lib/postgresql/data
       - ../skydive-forecast-location-service/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -65,7 +65,7 @@ services:
     container_name: skydive-redis
     command: redis-server --requirepass pass --appendonly yes
     ports:
-      - "6379:6379"
+      - "16379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -93,12 +93,12 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
+      - "19092:9092"
       - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:19092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -115,7 +115,7 @@ services:
     image: prom/prometheus:latest
     container_name: skydive-prometheus
     ports:
-      - "9090:9090"
+      - "19090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
@@ -129,7 +129,7 @@ services:
     image: grafana/loki:latest
     container_name: skydive-loki
     ports:
-      - "3100:3100"
+      - "13100:3100"
     volumes:
       - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml
       - loki-data:/loki
@@ -172,12 +172,9 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[0].URI: http://user-service:8081
-      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[1].URI: http://analysis-service:8082
-      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[2].URI: http://location-service:8083
-      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[3].URI: http://user-service:8081
-      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[4].URI: http://analysis-service:8082
-      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[5].URI: http://location-service:8083
+      USER_SERVICE_URL: http://user-service:8081
+      ANALYSIS_SERVICE_URL: http://analysis-service:8082
+      LOCATION_SERVICE_URL: http://location-service:8083
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       LOKI_URL: http://loki:3100/loki/api/v1/push
@@ -212,6 +209,10 @@ services:
       SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: skydive_forecast_user
       SPRING_LIQUIBASE_DEFAULT_SCHEMA: skydive_forecast_user
       SPRING_LIQUIBASE_CONTEXTS: seed
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: pass
+      SPRING_DATA_REDIS_TIMEOUT: 2000ms
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JWT_SECRET: hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
@@ -219,6 +220,8 @@ services:
       LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
       postgres-user:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -249,7 +252,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: pass
-      SPRING_DATA_REDIS_TIMEOUT: 2000ms
+      SPRING_DATA_REDIS_TIMEOUT: 5000ms
+      SPRING_DATA_REDIS_CONNECT_TIMEOUT: 5000ms
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       LOCATION_SERVICE_URL: http://location-service:8083
       JWT_SECRET: hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ
