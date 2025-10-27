@@ -111,6 +111,58 @@ services:
     networks:
       - skydive-network
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: skydive-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - skydive-network
+
+  loki:
+    image: grafana/loki:latest
+    container_name: skydive-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - skydive-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: skydive-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+      - zipkin
+    networks:
+      - skydive-network
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: skydive-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - skydive-network
+
   gateway:
     build:
       context: ../skydive-forecast-gateway
@@ -126,6 +178,9 @@ services:
       SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[3].URI: http://user-service:8081
       SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[4].URI: http://analysis-service:8082
       SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_ROUTES[5].URI: http://location-service:8083
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
       user-service:
         condition: service_healthy
@@ -159,6 +214,9 @@ services:
       SPRING_LIQUIBASE_CONTEXTS: seed
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JWT_SECRET: hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
       postgres-user:
         condition: service_healthy
@@ -198,6 +256,9 @@ services:
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_MYSERVICE_SLIDINGWINDOWSIZE: 10
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_MYSERVICE_FAILURERATETHRESHOLD: 50
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_MYSERVICE_WAITDURATIONINOPENSTATE: 100
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
       postgres-analysis:
         condition: service_healthy
@@ -235,6 +296,9 @@ services:
       SPRING_DATA_REDIS_TIMEOUT: 2000ms
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JWT_SECRET: hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
       postgres-location:
         condition: service_healthy
@@ -260,3 +324,6 @@ volumes:
   postgres-analysis-data:
   postgres-location-data:
   redis-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:

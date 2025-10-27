@@ -5,27 +5,27 @@ scrape_configs:
   - job_name: 'skydive-forecast-gateway'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: [ 'host.docker.internal:8080' ]
+      - targets: ['gateway:8080']
         labels:
-          service: 'skydive-forecast-gateway'
+          service: 'gateway'
 
   - job_name: 'skydive-forecast-user-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8081']
+      - targets: ['user-service:8081']
         labels:
-          service: 'skydive-forecast-user-service'
+          service: 'user-service'
 
   - job_name: 'skydive-forecast-analysis-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8082']
+      - targets: ['analysis-service:8082']
         labels:
-          service: 'skydive-forecast-analysis-service'
+          service: 'analysis-service'
 
   - job_name: 'skydive-forecast-location-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8083']
+      - targets: ['location-service:8083']
         labels:
-          service: 'skydive-forecast-location-service'
+          service: 'location-service'
