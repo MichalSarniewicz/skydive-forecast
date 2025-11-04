@@ -159,7 +159,45 @@ services:
     image: openzipkin/zipkin:latest
     container_name: skydive-zipkin
     ports:
-      - "9411:9411"
+      - "9412:9411"
+    networks:
+      - skydive-network
+
+  consul:
+    image: consul:1.15
+    container_name: skydive-consul
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skydive-network
+
+  config-server:
+    build:
+      context: ../skydive-forecast-config-server
+      dockerfile: Dockerfile
+    container_name: skydive-config-server
+    ports:
+      - "18888:8888"
+    volumes:
+      - ../skydive-forecast-svc-config:/config-repo:ro
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCHLOCATIONS: file:///config-repo/{application},file:///config-repo/shared
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - skydive-network
 
@@ -175,15 +213,25 @@ services:
       USER_SERVICE_URL: http://user-service:8081
       ANALYSIS_SERVICE_URL: http://analysis-service:8082
       LOCATION_SERVICE_URL: http://location-service:8083
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: pass
+      SPRING_DATA_REDIS_TIMEOUT: 2000ms
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
+      consul:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
       user-service:
         condition: service_healthy
       analysis-service:
         condition: service_healthy
       location-service:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
@@ -202,7 +250,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      SPRING_PROFILES_ACTIVE: dev
+      SPRING_PROFILES_ACTIVE: dev,consul
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/skydive_forecast_user_db
       SPRING_DATASOURCE_USERNAME: skydive_forecast_user
       SPRING_DATASOURCE_PASSWORD: pass
@@ -219,6 +267,10 @@ services:
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
+      consul:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
       postgres-user:
         condition: service_healthy
       redis:
@@ -242,7 +294,7 @@ services:
     ports:
       - "8082:8082"
     environment:
-      SPRING_PROFILES_ACTIVE: dev
+      SPRING_PROFILES_ACTIVE: dev,consul
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/skydive_forecast_analysis_db
       SPRING_DATASOURCE_USERNAME: skydive_forecast_analysis
       SPRING_DATASOURCE_PASSWORD: pass
@@ -264,6 +316,10 @@ services:
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
+      consul:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
       postgres-analysis:
         condition: service_healthy
       redis:
@@ -287,7 +343,7 @@ services:
     ports:
       - "8083:8083"
     environment:
-      SPRING_PROFILES_ACTIVE: dev
+      SPRING_PROFILES_ACTIVE: dev,consul
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-location:5432/skydive_forecast_location_db
       SPRING_DATASOURCE_USERNAME: skydive_forecast_location
       SPRING_DATASOURCE_PASSWORD: pass
@@ -304,6 +360,10 @@ services:
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
+      consul:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
       postgres-location:
         condition: service_healthy
       redis:
