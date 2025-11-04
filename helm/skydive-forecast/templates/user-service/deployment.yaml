@@ -1,0 +1,51 @@
+{{- if .Values.userService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.userService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.userService.name }}
+spec:
+  replicas: {{ .Values.userService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.userService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.userService.name }}
+    spec:
+      containers:
+      - name: {{ .Values.userService.name }}
+        image: "{{ .Values.userService.image.repository }}:{{ .Values.userService.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.userService.service.port }}
+          name: http
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: SPRING_CLOUD_CONFIG_URI
+          value: "http://{{ .Values.configServer.name }}:{{ .Values.configServer.service.port }}"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://postgresql:5432/skydive_forecast_user_db"
+        - name: SPRING_DATA_REDIS_HOST
+          value: "redis-master"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka:9092"
+        resources:
+          {{- toYaml .Values.userService.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: http
+          initialDelaySeconds: 90
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 5
+{{- end }}

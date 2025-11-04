@@ -1,0 +1,13 @@
+apiVersion: v2
+name: skydive-forecast
+description: A Helm chart for Skydive Forecast microservices
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - microservices
+  - spring-boot
+  - kafka
+  - redis
+maintainers:
+  - name: Michal Sarniewicz

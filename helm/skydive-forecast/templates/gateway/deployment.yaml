@@ -1,0 +1,51 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.gateway.name }}
+spec:
+  replicas: {{ .Values.gateway.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.gateway.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.gateway.name }}
+    spec:
+      containers:
+      - name: {{ .Values.gateway.name }}
+        image: "{{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.gateway.service.port }}
+          name: http
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: SPRING_CLOUD_CONFIG_URI
+          value: "http://{{ .Values.configServer.name }}:{{ .Values.configServer.service.port }}"
+        - name: USER_SERVICE_URL
+          value: "http://{{ .Values.userService.name }}:{{ .Values.userService.service.port }}"
+        - name: ANALYSIS_SERVICE_URL
+          value: "http://{{ .Values.analysisService.name }}:{{ .Values.analysisService.service.port }}"
+        - name: LOCATION_SERVICE_URL
+          value: "http://{{ .Values.locationService.name }}:{{ .Values.locationService.service.port }}"
+        resources:
+          {{- toYaml .Values.gateway.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: http
+          initialDelaySeconds: 90
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 5
+{{- end }}
