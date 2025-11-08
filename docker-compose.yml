@@ -151,15 +151,31 @@ services:
     depends_on:
       - prometheus
       - loki
-      - zipkin
+      - jaeger
     networks:
       - skydive-network
 
-  zipkin:
-    image: openzipkin/zipkin:latest
-    container_name: skydive-zipkin
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: skydive-otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml
     ports:
-      - "9412:9411"
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus metrics exporter
+    networks:
+      - skydive-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: skydive-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14250:14250"  # gRPC
     networks:
       - skydive-network
 
@@ -217,7 +233,7 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: pass
       SPRING_DATA_REDIS_TIMEOUT: 2000ms
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
@@ -263,7 +279,7 @@ services:
       SPRING_DATA_REDIS_TIMEOUT: 2000ms
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JWT_SECRET: hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
@@ -312,7 +328,7 @@ services:
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_MYSERVICE_SLIDINGWINDOWSIZE: 10
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_MYSERVICE_FAILURERATETHRESHOLD: 50
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_MYSERVICE_WAITDURATIONINOPENSTATE: 100
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
@@ -356,7 +372,7 @@ services:
       SPRING_DATA_REDIS_TIMEOUT: 2000ms
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JWT_SECRET: hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       LOKI_URL: http://loki:3100/loki/api/v1/push
     depends_on:
