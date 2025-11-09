@@ -2,11 +2,12 @@
 
 [![Java](https://img.shields.io/badge/Java-21-green?logo=openjdk)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.6-brightgreen?logo=springboot)](https://spring.io/projects/spring-boot)
+[![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2025.0.0-brightgreen)](https://spring.io/projects/spring-cloud)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 
-A comprehensive microservices-based system for analyzing weather conditions and generating skydive forecasts. Built with Spring Boot, this project demonstrates modern software architecture patterns including hexagonal architecture, event-driven design, and containerization.
+A comprehensive microservices-based system for analyzing weather conditions and generating skydive forecasts. Built with Spring Boot, this project demonstrates software architecture patterns including hexagonal architecture, event-driven design, and containerization.
 
 ### Status: **In Development**
 
@@ -63,7 +64,9 @@ graph TB
 
 ### Service Responsibilities
 
-- **API Gateway** (Port 8080): Central entry point, routes requests to microservices, aggregates API documentation
+- **Consul** (Port 8500): Service discovery, health checking, service registry with UI
+- **Config Server** (Port 8888): Centralized configuration management
+- **API Gateway** (Port 8080): Central entry point, routes requests via service discovery, aggregates API documentation
 - **User Service** (Port 8081): Authentication, authorization, JWT tokens, RBAC, user management
 - **Analysis Service** (Port 8082): Weather analysis, AI-powered forecasts, asynchronous report generation
 - **Location Service** (Port 8083): Dropzone management, geographical data, location-based queries
@@ -79,19 +82,22 @@ graph TB
 - **PostgreSQL 15** - Relational database (separate instance per service)
 - **Redis 7** - Caching and session management
 - **Apache Kafka** - Event streaming and asynchronous messaging
-- **Monitoring**: Actuator, Prometheus, Grafana, Loki, Zipkin
+- **Monitoring**: Actuator, OpenTelemetry, Prometheus, Grafana, Loki, Jaeger
 - **Liquibase** - Database schema versioning
 - **Docker** - Containerization
 - **Docker Compose** - Container orchestration
 
 ### Additional Tools
 - **Spring AI with OpenAI** - AI-powered forecast recommendations
+- **OpenTelemetry** - Unified observability (traces, metrics, logs)
 - **Resilience4j** - Circuit breaker pattern for fault tolerance
-- **MapStruct** - DTO mapping
+- **MapStruct** - DTO and entity mapping
 - **Lombok** - Boilerplate reduction
-- **SpringDoc OpenAPI 2.8.13** - API documentation (Swagger)
-- **Testcontainers** - Integration testing
-- **Swagger UI** - API documentation (Swagger)
+- **SpringDoc OpenAPI** - API documentation
+- **Testcontainers** - Integration testing with PostgreSQL and Kafka
+- **JUnit 5 & Mockito** - Unit testing
+- **JaCoCo** - Code coverage (70% minimum)
+- **WireMock & MockWebServer** - External service mocking
 
 ### Architecture Patterns
 - **Hexagonal Architecture** (Ports and Adapters)
@@ -154,6 +160,7 @@ All services should show status as "healthy".
 ### 4. Access the Application
 
 - **API Gateway**: http://localhost:8080
+- **Consul UI**: http://localhost:8500 (Service Discovery Dashboard)
 - **Swagger UI** (Aggregated): http://localhost:8080/swagger-ui.html
 - **OpenAPI Docs**: http://localhost:8080/v3/api-docs
 
@@ -166,25 +173,41 @@ Individual service documentation:
 
 ### Main Endpoints
 
+#### Authentication (`/api/users/**`)
+- `POST /api/users/auth/token` - Generate JWT token (login)
+- `POST /api/users/auth/refresh` - Refresh JWT token
+
 #### User Management (`/api/users/**`)
-- `POST /api/users/auth/register` - Register new user
-- `POST /api/users/auth/login` - Login and get JWT token
-- `POST /api/users/auth/refresh` - Refresh access token
-- `GET /api/users/{id}` - Get user details
-- `PUT /api/users/{id}` - Update user
+- `GET /api/users` - Get all users (requires `USER_VIEW` permission)
+- `POST /api/users` - Create new user (requires `USER_CREATE` permission)
+- `PUT /api/users/{user-id}` - Update user (requires `USER_EDIT` permission)
+- `PATCH /api/users/{user-id}/status` - Activate/deactivate user (requires `USER_STATUS_UPDATE` permission)
+- `PATCH /api/users/me/password` - Change password (requires `USER_PASSWORD_CHANGE` permission)
+
+#### Role & Permission Management (`/api/users/**`)
+- `GET /api/users/roles` - Get all roles
+- `POST /api/users/roles?role-name={name}` - Create new role
+- `DELETE /api/users/roles/{role-id}` - Delete role
+- `GET /api/users/permissions` - Get all permissions
+- `POST /api/users/permissions` - Create permission
+- `GET /api/users/role-permissions/role/{role-id}` - Get permissions by role
+- `POST /api/users/role-permissions` - Assign permission to role
+- `GET /api/users/user-roles/user/{user-id}` - Get roles for user
+- `POST /api/users/user-roles` - Assign role to user
 
 #### Location Management (`/api/locations/**`)
-- `GET /api/locations/dropzones` - List all dropzones
-- `POST /api/locations/dropzones` - Create dropzone
-- `GET /api/locations/dropzones/{id}` - Get dropzone details
-- `GET /api/locations/dropzones/city/{city}` - Find dropzones by city
-- `PUT /api/locations/dropzones/{id}` - Update dropzone
-- `DELETE /api/locations/dropzones/{id}` - Delete dropzone
+- `GET /api/locations/dropzones` - List all dropzones (requires `DROPZONE_VIEW` permission)
+- `POST /api/locations/dropzones` - Create dropzone (requires `DROPZONE_CREATE` permission)
+- `GET /api/locations/dropzones/{id}` - Get dropzone details (requires `DROPZONE_VIEW` permission)
+- `GET /api/locations/dropzones/city/{city}` - Find dropzones by city (requires `DROPZONE_VIEW` permission)
+- `PUT /api/locations/dropzones/{id}` - Update dropzone (requires `DROPZONE_UPDATE` permission)
+- `DELETE /api/locations/dropzones/{id}` - Delete dropzone (requires `DROPZONE_DELETE` permission)
 
 #### Weather Analysis (`/api/analyses/**`)
-- `POST /api/analyses/weather-reports` - Request weather report
-- `GET /api/analyses/weather-reports/{id}` - Get weather report
-- `GET /api/analyses/weather-reports` - List weather reports
+- `POST /api/analyses/reports/request` - Request weather report generation (async)
+- `GET /api/analyses/reports/{reportId}` - Get weather report by ID
+- `GET /api/analyses/reports` - List all user reports
+- `GET /api/analyses/reports/latest` - Get latest user report
 
 ## Development
 
@@ -235,15 +258,21 @@ done
 
 ## Project Structure
 
+This project uses a **multi-repository** approach where each microservice is maintained in its own Git repository:
+
 ```
-skydive-forecast/
-├── skydive-forecast-gateway/          # API Gateway (Port 8080)
-├── skydive-forecast-user-service/     # User Management (Port 8081)
-├── skydive-forecast-analysis-service/ # Weather Analysis (Port 8082)
-├── skydive-forecast-location-service/ # Location Management (Port 8083)
-├── docker-compose.yml                 # Docker Compose configuration
-├── setup.sh                           # Repository setup script
-└── README.md                          # This file
+Parent Directory/
+├── skydive-forecast/                  # Main orchestration repository
+│   ├── docker-compose.yml            # Docker Compose configuration
+│   ├── setup.sh                      # Repository setup script
+│   ├── monitoring/                   # Monitoring configurations
+│   └── README.md                     # This file
+│
+├── skydive-forecast-gateway/          # API Gateway repository (Port 8080)
+├── skydive-forecast-user-service/     # User Service repository (Port 8081)
+├── skydive-forecast-analysis-service/ # Analysis Service repository (Port 8082)
+├── skydive-forecast-location-service/ # Location Service repository (Port 8083)
+└── skydive-forecast-config-server/    # Config Server repository (Port 8888)
 ```
 
 Each microservice follows **Hexagonal Architecture**:
@@ -267,6 +296,37 @@ service/
 - **Permission-Based Authorization**: Fine-grained access control with custom permissions
 - **Role-Based Access Control (RBAC)**: Users, roles, and permissions management
 - **Shared JWT Secret**: All services validate tokens with the same secret
+
+## Test Accounts
+
+The system comes pre-configured with test accounts for demonstration purposes:
+
+### Admin Account
+- **Email**: `admin@skydive.com`
+- **Password**: `Admin123!`
+- **Role**: ADMIN
+- **Permissions**: Full system access
+- **Status**: Active
+
+### Regular User Account
+- **Email**: `user@skydive.com`
+- **Password**: `User123!`
+- **Role**: USER
+- **Permissions**: Basic user operations
+- **Status**: Active
+
+**Usage Example:**
+```bash
+# Login as admin
+curl -X POST http://localhost:8080/api/users/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@skydive.com","password":"Admin123!"}'
+
+# Login as regular user
+curl -X POST http://localhost:8080/api/users/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@skydive.com","password":"User123!"}'
+```
 
 ## Monitoring & Health
 
@@ -292,50 +352,111 @@ docker-compose down
 docker-compose down -v
 ```
 
+## Kubernetes Deployment
+
+The project includes production-ready Helm charts for Kubernetes deployment.
+
+### Quick Start with Kubernetes
+
+```bash
+# Build Docker images
+cd helm
+./build-images.sh
+
+# Install to Kubernetes
+helm install skydive-forecast ./skydive-forecast -n skydive-forecast --create-namespace
+
+# Access services
+kubectl port-forward svc/gateway 8080:8080 -n skydive-forecast
+```
+
+### Features
+
+- **High Availability**: 2 replicas per microservice
+- **Auto-scaling**: HorizontalPodAutoscaler ready
+- **Health Checks**: Liveness and readiness probes
+- **Resource Management**: CPU/Memory limits and requests
+- **Service Discovery**: Native Kubernetes DNS
+- **Load Balancing**: Kubernetes Services
+- **Monitoring**: Prometheus + Grafana included
+
+See [helm/README.md](helm/README.md) for detailed Kubernetes deployment guide.
+
 ## Monitoring
 
 The service includes comprehensive monitoring capabilities:
 
 ### Metrics (Prometheus)
 
-- **Endpoint**: `http://localhost:8080/actuator/prometheus`
+- **Endpoint**: `http://localhost:19090`
 - **Metrics**: JVM, HTTP requests, database connections, Kafka consumers, Redis cache
+- **Service Endpoints**:
+  - Gateway: `http://localhost:8080/actuator/prometheus`
+  - User Service: `http://localhost:8081/actuator/prometheus`
+  - Analysis Service: `http://localhost:8082/actuator/prometheus`
+  - Location Service: `http://localhost:8083/actuator/prometheus`
 
 ### Health Checks
 
-- **Endpoint**: `http://localhost:8080/actuator/health`
+- **Gateway**: `http://localhost:8080/actuator/health`
+- **User Service**: `http://localhost:8081/actuator/health`
+- **Analysis Service**: `http://localhost:8082/actuator/health`
+- **Location Service**: `http://localhost:8083/actuator/health`
 
 ### Logs (Loki)
 
-Application logs are automatically sent to Loki for centralized log aggregation.
+- **Endpoint**: `http://localhost:13100`
+- Application logs are automatically sent to Loki for centralized log aggregation
 
-### Distributed Tracing (Zipkin)
+### Distributed Tracing (Jaeger)
 
-- **Endpoint**: `http://localhost:9411`
+- **Endpoint**: `http://localhost:16686`
 - **Traces**: Request flows across services with timing information
 - **Sampling**: 100% of requests traced (configurable)
+- **Features**: Service dependency graph, trace comparison, performance analysis
+
+### OpenTelemetry Collector
+
+- **OTLP gRPC**: `http://localhost:4317`
+- **OTLP HTTP**: `http://localhost:4318`
+- **Metrics Endpoint**: `http://localhost:8889/metrics`
+- **Purpose**: Unified telemetry data collection and export
 
 ### Grafana Dashboards
 
-Access Grafana at `http://localhost:3000` (admin/admin)
-
-Recommended dashboard: Import ID **11378** (JVM Micrometer)
+- **Endpoint**: `http://localhost:3000` (admin/admin)
+- Recommended dashboard: Import ID **11378** (JVM Micrometer)
 
 ## Troubleshooting
 
 ### Services not starting
-- Check if ports 8080-8083, 5432-5434, 6379, 9092, 2181 are available
+- Check if required ports are available:
+  - Services: 8080-8083
+  - PostgreSQL: 15432-15434
+  - Redis: 16379
+  - Kafka: 19092, 29092
+  - Zookeeper: 2181
+  - Monitoring: 3000 (Grafana), 19090 (Prometheus), 13100 (Loki), 16686 (Jaeger)
+  - OpenTelemetry: 4317 (gRPC), 4318 (HTTP), 8889 (metrics)
 - Verify Docker has enough resources (4GB RAM minimum recommended)
 - Check logs: `docker-compose logs [service-name]`
 
 ### Database connection issues
 - Wait for databases to be fully initialized (check health status)
 - Verify database credentials in `docker-compose.yml`
+- Check PostgreSQL logs: `docker-compose logs postgres-user postgres-analysis postgres-location`
 
 ### Kafka connectivity issues
 - Ensure Zookeeper is running: `docker-compose logs zookeeper`
 - Check Kafka logs: `docker-compose logs kafka`
 - Kafka may take 30-60 seconds to fully initialize
+
+### Swagger/OpenAPI issues
+- Gateway aggregates OpenAPI docs from all services
+- Individual service docs available at:
+  - User: `http://localhost:8081/v3/api-docs/users`
+  - Analysis: `http://localhost:8082/v3/api-docs/analyses`
+  - Location: `http://localhost:8083/v3/api-docs/locations`
 
 ## License
 
