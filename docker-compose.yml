@@ -179,6 +179,21 @@ services:
     networks:
       - skydive-network
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: skydive-kafka-ui
+    ports:
+      - "19000:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: skydive-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - skydive-network
+
   consul:
     image: consul:1.15
     container_name: skydive-consul

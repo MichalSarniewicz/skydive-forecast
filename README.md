@@ -161,6 +161,7 @@ All services should show status as "healthy".
 
 - **API Gateway**: http://localhost:8080
 - **Consul UI**: http://localhost:8500 (Service Discovery Dashboard)
+- **Kafka UI**: http://localhost:19000 (Topics, Messages, Consumer Groups)
 - **Swagger UI** (Aggregated): http://localhost:8080/swagger-ui.html
 - **OpenAPI Docs**: http://localhost:8080/v3/api-docs
 
@@ -408,6 +409,12 @@ The service includes comprehensive monitoring capabilities:
 - **Endpoint**: `http://localhost:13100`
 - Application logs are automatically sent to Loki for centralized log aggregation
 
+### Kafka Monitoring
+
+- **Kafka UI**: `http://localhost:19000`
+- **Features**: Topics, messages, consumer groups, brokers, configurations
+- **Real-time**: Live message viewing and topic statistics
+
 ### Distributed Tracing (Jaeger)
 
 - **Endpoint**: `http://localhost:16686`
@@ -436,7 +443,7 @@ The service includes comprehensive monitoring capabilities:
   - Redis: 16379
   - Kafka: 19092, 29092
   - Zookeeper: 2181
-  - Monitoring: 3000 (Grafana), 19090 (Prometheus), 13100 (Loki), 16686 (Jaeger)
+  - Monitoring: 3000 (Grafana), 19090 (Prometheus), 13100 (Loki), 16686 (Jaeger), 19000 (Kafka UI)
   - OpenTelemetry: 4317 (gRPC), 4318 (HTTP), 8889 (metrics)
 - Verify Docker has enough resources (4GB RAM minimum recommended)
 - Check logs: `docker-compose logs [service-name]`
