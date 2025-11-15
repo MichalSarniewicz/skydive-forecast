@@ -151,7 +151,7 @@ services:
     depends_on:
       - prometheus
       - loki
-      - jaeger
+      - tempo
     networks:
       - skydive-network
 
@@ -168,14 +168,16 @@ services:
     networks:
       - skydive-network
 
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: skydive-jaeger
-    environment:
-      COLLECTOR_OTLP_ENABLED: true
+  tempo:
+    image: grafana/tempo:latest
+    container_name: skydive-tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
     ports:
-      - "16686:16686"  # Jaeger UI
-      - "14250:14250"  # gRPC
+      - "3200:3200"   # Tempo HTTP
+      - "9411:9411"   # Zipkin compatibility
+    volumes:
+      - ./monitoring/tempo.yaml:/etc/tempo.yaml
+      - tempo-data:/var/tempo
     networks:
       - skydive-network
 
@@ -422,3 +424,4 @@ volumes:
   prometheus-data:
   grafana-data:
   loki-data:
+  tempo-data:
