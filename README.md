@@ -22,54 +22,88 @@ The system follows a microservices architecture with clear separation of concern
 ```mermaid
 graph TB
     Client[Client]
+    
+    subgraph Discovery["Service Discovery"]
+        Consul[Consul :8500]
+        ConfigServer[Config Server :8888]
+    end
+    
     Gateway[API Gateway :8080]
     
-    subgraph Services
+    subgraph Services["Microservices"]
         User[User Service :8081]
         Analysis[Analysis Service :8082]
         Location[Location Service :8083]
     end
     
-    subgraph Databases
-        UserDB[(PostgreSQL<br/>User DB :5432)]
-        AnalysisDB[(PostgreSQL<br/>Analysis DB :5433)]
-        LocationDB[(PostgreSQL<br/>Location DB :5434)]
+    subgraph Databases["Databases"]
+        UserDB[(PostgreSQL<br/>User DB)]
+        AnalysisDB[(PostgreSQL<br/>Analysis DB)]
+        LocationDB[(PostgreSQL<br/>Location DB)]
     end
     
-    subgraph Infrastructure
-        Redis[(Redis :6379)]
-        Kafka[Kafka :9092]
-        Zookeeper[Zookeeper :2181]
+    subgraph Infrastructure["Infrastructure"]
+        Redis[(Redis Cache)]
+        Kafka[Kafka Broker]
     end
     
-    Client -->|HTTP| Gateway
-    Gateway -->|Route /api/users/**| User
-    Gateway -->|Route /api/analyses/**| Analysis
-    Gateway -->|Route /api/locations/**| Location
+    subgraph Observability["Observability"]
+        OTel[OTel Collector]
+        Jaeger[Jaeger UI]
+        Prometheus[Prometheus]
+        Grafana[Grafana]
+    end
     
-    User --> UserDB
-    Analysis --> AnalysisDB
-    Location --> LocationDB
+    Client -->|HTTP/REST| Gateway
+    Gateway -.->|Service Discovery| Consul
+    Services -.->|Register| Consul
+    Services -.->|Config| ConfigServer
     
-    User --> Redis
-    Analysis --> Redis
-    Location --> Redis
+    Gateway -->|JWT Auth| User
+    Gateway -->|Route| Analysis
+    Gateway -->|Route| Location
     
-    Analysis --> Kafka
-    User --> Kafka
-    Location --> Kafka
+    User -->|JPA| UserDB
+    Analysis -->|JPA| AnalysisDB
+    Location -->|JPA| LocationDB
     
-    Kafka --> Zookeeper
+    User -->|Cache| Redis
+    Analysis -->|Cache| Redis
+    Location -->|Cache| Redis
+    
+    Analysis -->|Events| Kafka
+    User -->|Events| Kafka
+    Location -->|Events| Kafka
+    
+    Services -->|Traces/Metrics| OTel
+    Gateway -->|Traces/Metrics| OTel
+    OTel --> Jaeger
+    OTel --> Prometheus
+    Prometheus --> Grafana
 ```
 
 ### Service Responsibilities
 
-- **Consul** (Port 8500): Service discovery, health checking, service registry with UI
-- **Config Server** (Port 8888): Centralized configuration management
-- **API Gateway** (Port 8080): Central entry point, routes requests via service discovery, aggregates API documentation
-- **User Service** (Port 8081): Authentication, authorization, JWT tokens, RBAC, user management
-- **Analysis Service** (Port 8082): Weather analysis, AI-powered forecasts, asynchronous report generation
-- **Location Service** (Port 8083): Dropzone management, geographical data, location-based queries
+#### Core Services
+- **API Gateway** (Port 8080): Central entry point, JWT validation, request routing, rate limiting, API documentation aggregation
+- **User Service** (Port 8081): Authentication (JWT), authorization (RBAC), user management, role/permission management
+- **Analysis Service** (Port 8082): Weather data analysis, AI-powered forecasts (OpenAI), async report generation via Kafka
+- **Location Service** (Port 8083): Dropzone CRUD operations, geographical queries, location data management
+
+#### Infrastructure
+- **Consul** (Port 8500): Service discovery, health checking, dynamic service registry
+- **Config Server** (Port 8888): Centralized configuration management, externalized properties
+- **PostgreSQL** (3 instances): Database per service pattern, data isolation
+- **Redis** (Port 16379): Distributed caching, session storage, performance optimization
+- **Kafka** (Port 19092): Event streaming, async communication, event-driven architecture
+
+#### Observability
+- **OpenTelemetry Collector**: Unified telemetry collection (traces, metrics, logs)
+- **Jaeger** (Port 16686): Distributed tracing, request flow visualization
+- **Prometheus** (Port 19090): Metrics collection and storage
+- **Grafana** (Port 3000): Metrics visualization, dashboards
+- **Loki** (Port 13100): Log aggregation and querying
+- **Kafka UI** (Port 19000): Kafka monitoring, topic/consumer management
 
 ## Technology Stack
 
@@ -84,8 +118,8 @@ graph TB
 - **Apache Kafka** - Event streaming and asynchronous messaging
 - **Monitoring**: Actuator, OpenTelemetry, Prometheus, Grafana, Loki, Jaeger
 - **Liquibase** - Database schema versioning
-- **Docker** - Containerization
-- **Docker Compose** - Container orchestration
+- **Docker & Docker Compose** - Containerization and local orchestration
+- **Kubernetes & Helm** - Production deployment and orchestration
 
 ### Additional Tools
 - **Spring AI with OpenAI** - AI-powered forecast recommendations
@@ -93,7 +127,7 @@ graph TB
 - **Resilience4j** - Circuit breaker pattern for fault tolerance
 - **MapStruct** - DTO and entity mapping
 - **Lombok** - Boilerplate reduction
-- **SpringDoc OpenAPI** - API documentation
+- **SpringDoc OpenAPI (Swagger)** - Interactive API documentation
 - **Testcontainers** - Integration testing with PostgreSQL and Kafka
 - **JUnit 5 & Mockito** - Unit testing
 - **JaCoCo** - Code coverage (70% minimum)
@@ -128,6 +162,8 @@ This will clone:
 - `skydive-forecast-user-service`
 - `skydive-forecast-analysis-service`
 - `skydive-forecast-location-service`
+- `skydive-forecast-config-server`
+- `skydive-forecast-svc-config`
 
 ### 2. Start All Services
 
@@ -139,13 +175,14 @@ docker-compose up --build
 
 This command will:
 - Build Docker images for all microservices
-- Start PostgreSQL databases (3 instances)
-- Start Redis for caching
-- Start Kafka and Zookeeper for messaging
-- Start all microservices
-- Start the API Gateway
+- Start infrastructure (PostgreSQL, Redis, Kafka, Consul)
+- Start Config Server with externalized configurations
+- Start all microservices with service discovery
+- Start API Gateway
+- Start observability stack (OTel, Jaeger, Prometheus, Grafana, Loki)
+- Run Liquibase migrations and seed test data
 
-**First startup may take 2-3 minutes** as services initialize and run database migrations.
+**First startup may take 2-3 minutes** as services initialize, register with Consul, and run database migrations.
 
 ### 3. Verify Services
 
@@ -212,26 +249,31 @@ Individual service documentation:
 
 ## Development
 
-### Running Services Locally (Without Docker)
+### Running Services Locally (Hybrid Mode)
 
-1. **Start infrastructure services**:
+Run infrastructure in Docker, services locally for development:
+
+1. **Start infrastructure only**:
 ```bash
-docker-compose up postgres-user postgres-analysis postgres-location redis kafka zookeeper
+docker-compose up -d postgres-user postgres-analysis postgres-location redis kafka zookeeper consul config-server
 ```
 
-2. **Run each service**:
+2. **Run services locally**:
 ```bash
-# In each service directory:
+# Terminal 1 - User Service
 cd skydive-forecast-user-service
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
-cd ../skydive-forecast-analysis-service
+# Terminal 2 - Analysis Service
+cd skydive-forecast-analysis-service
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
-cd ../skydive-forecast-location-service
+# Terminal 3 - Location Service
+cd skydive-forecast-location-service
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
-cd ../skydive-forecast-gateway
+# Terminal 4 - Gateway
+cd skydive-forecast-gateway
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
@@ -273,7 +315,8 @@ Parent Directory/
 ├── skydive-forecast-user-service/     # User Service repository (Port 8081)
 ├── skydive-forecast-analysis-service/ # Analysis Service repository (Port 8082)
 ├── skydive-forecast-location-service/ # Location Service repository (Port 8083)
-└── skydive-forecast-config-server/    # Config Server repository (Port 8888)
+├── skydive-forecast-config-server/    # Config Server repository (Port 8888)
+└── skydive-forecast-svc-config/       # Configuration repository (Git-based configs)
 ```
 
 Each microservice follows **Hexagonal Architecture**:
@@ -291,42 +334,136 @@ service/
     └── db/changelog/           # Liquibase migrations
 ```
 
-## Security
+## Security & Authentication
 
-- **JWT Authentication**: All services use JWT tokens for authentication
-- **Permission-Based Authorization**: Fine-grained access control with custom permissions
-- **Role-Based Access Control (RBAC)**: Users, roles, and permissions management
-- **Shared JWT Secret**: All services validate tokens with the same secret
+### JWT-Based Authentication
+- **Token Generation**: User Service issues JWT tokens upon successful login
+- **Token Validation**: All services validate JWT tokens using shared secret
+- **Token Refresh**: Refresh tokens for extended sessions
+- **Stateless**: No server-side session storage
 
-## Test Accounts
+### Authorization (RBAC)
+- **Role-Based Access Control**: Users assigned to roles (ADMIN, USER)
+- **Permission-Based**: Fine-grained permissions (USER_VIEW, USER_CREATE, DROPZONE_VIEW, etc.)
+- **Dynamic Assignment**: Roles and permissions managed via API
+- **Gateway Enforcement**: JWT validation at API Gateway level
 
-The system comes pre-configured with test accounts for demonstration purposes:
+### Authentication Flow
+```
+1. POST /api/users/auth/token {email, password}
+2. User Service validates credentials
+3. Returns JWT token (valid 24h) + refresh token
+4. Client includes token in Authorization header: "Bearer {token}"
+5. Gateway validates JWT and routes to services
+6. Services verify token and check permissions
+```
 
-### Admin Account
+## Test Accounts & Seed Data
+
+The system automatically seeds test data on first startup via Liquibase migrations:
+
+### Pre-configured Accounts
+
+#### Admin Account
 - **Email**: `admin@skydive.com`
 - **Password**: `Admin123!`
 - **Role**: ADMIN
-- **Permissions**: Full system access
+- **Permissions**: Full system access (all USER_*, DROPZONE_*, ROLE_*, PERMISSION_* permissions)
 - **Status**: Active
 
-### Regular User Account
+#### Regular User Account
 - **Email**: `user@skydive.com`
 - **Password**: `User123!`
 - **Role**: USER
-- **Permissions**: Basic user operations
+- **Permissions**: Basic operations (USER_VIEW, DROPZONE_VIEW, USER_PASSWORD_CHANGE)
 - **Status**: Active
 
-**Usage Example:**
+### Seed Data Includes
+- **Roles**: ADMIN, USER
+- **Permissions**: 15+ granular permissions for users, dropzones, roles
+- **Sample Dropzones**: Pre-configured skydiving locations
+- **Role-Permission Mappings**: Pre-assigned permissions to roles
+
+### Authentication Example
 ```bash
-# Login as admin
+# 1. Login as admin
 curl -X POST http://localhost:8080/api/users/auth/token \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@skydive.com","password":"Admin123!"}'
 
-# Login as regular user
-curl -X POST http://localhost:8080/api/users/auth/token \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@skydive.com","password":"User123!"}'
+# Response: {"token": "eyJhbGc...", "refreshToken": "..."}
+
+# 2. Use token in requests
+curl -X GET http://localhost:8080/api/users \
+  -H "Authorization: Bearer eyJhbGc..."
+```
+
+## AI Integration (OpenAI)
+
+The Analysis Service uses OpenAI for generating intelligent weather forecasts.
+
+### Configuration
+
+To enable AI features, add your OpenAI API key:
+
+**Option 1: Environment Variable**
+```bash
+export OPENAI_API_KEY=sk-your-api-key-here
+docker-compose up
+```
+
+**Option 2: Docker Compose Override**
+```yaml
+# docker-compose.override.yml
+services:
+  analysis-service:
+    environment:
+      SPRING_AI_OPENAI_API_KEY: sk-your-api-key-here
+```
+
+**Option 3: Config Repository**
+```yaml
+# skydive-forecast-svc-config/analysis-service/application.yml
+spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-your-api-key-here}
+```
+
+### AI Features
+- **Weather Analysis**: Interprets weather data for skydiving suitability
+- **Recommendations**: Generates natural language forecasts
+- **Risk Assessment**: Evaluates conditions (wind, visibility, clouds)
+
+**Note**: Without API key, the service will work but AI features will be disabled.
+
+## CI/CD Pipeline
+
+Each microservice includes GitHub Actions workflows for continuous integration:
+
+### Automated Workflows
+- **Build & Test**: Maven build, unit tests, integration tests
+- **Code Quality**: JaCoCo coverage reports (70% minimum)
+- **Docker Build**: Multi-stage Docker image builds
+- **Security Scan**: Dependency vulnerability checks
+- **Artifact Publishing**: Docker images to registry
+
+### Pipeline Stages
+```yaml
+1. Checkout code
+2. Setup Java 21
+3. Maven build (mvn clean package)
+4. Run tests (JUnit + Testcontainers)
+5. Generate coverage report (JaCoCo)
+6. Build Docker image
+7. Push to container registry
+```
+
+### Local CI Simulation
+```bash
+# Run full CI pipeline locally
+mvn clean verify
+mvn jacoco:report  # Coverage report in target/site/jacoco/
 ```
 
 ## Monitoring & Health
@@ -353,35 +490,44 @@ docker-compose down
 docker-compose down -v
 ```
 
-## Kubernetes Deployment
+## Production Deployment
 
-The project includes production-ready Helm charts for Kubernetes deployment.
+### Docker Compose (Development/Demo)
+```bash
+docker-compose up --build
+```
 
-### Quick Start with Kubernetes
+### Kubernetes with Helm (Production)
+
+The project includes production-ready Helm charts:
 
 ```bash
-# Build Docker images
+# Build and push images
 cd helm
 ./build-images.sh
 
 # Install to Kubernetes
-helm install skydive-forecast ./skydive-forecast -n skydive-forecast --create-namespace
+helm install skydive-forecast ./skydive-forecast \
+  -n skydive-forecast \
+  --create-namespace \
+  --set openai.apiKey=sk-your-key
 
 # Access services
 kubectl port-forward svc/gateway 8080:8080 -n skydive-forecast
 ```
 
-### Features
-
-- **High Availability**: 2 replicas per microservice
-- **Auto-scaling**: HorizontalPodAutoscaler ready
+### Production Features
+- **High Availability**: 2+ replicas per service
+- **Auto-scaling**: HorizontalPodAutoscaler (CPU/Memory based)
 - **Health Checks**: Liveness and readiness probes
-- **Resource Management**: CPU/Memory limits and requests
+- **Resource Limits**: CPU/Memory requests and limits
 - **Service Discovery**: Native Kubernetes DNS
-- **Load Balancing**: Kubernetes Services
-- **Monitoring**: Prometheus + Grafana included
+- **Load Balancing**: Kubernetes Services with session affinity
+- **Secrets Management**: Kubernetes Secrets for sensitive data
+- **Rolling Updates**: Zero-downtime deployments
+- **Monitoring**: Prometheus ServiceMonitor integration
 
-See [helm/README.md](helm/README.md) for detailed Kubernetes deployment guide.
+See [helm/README.md](helm/README.md) for detailed deployment guide.
 
 ## Monitoring
 
