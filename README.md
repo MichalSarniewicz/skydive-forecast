@@ -49,8 +49,9 @@ graph TB
     
     subgraph Observability["Observability"]
         OTel[OTel Collector]
-        Jaeger[Jaeger UI]
+        Tempo[Tempo]
         Prometheus[Prometheus]
+        Loki[Loki]
         Grafana[Grafana]
     end
     
@@ -75,11 +76,14 @@ graph TB
     User -->|Events| Kafka
     Location -->|Events| Kafka
     
-    Services -->|Traces/Metrics| OTel
-    Gateway -->|Traces/Metrics| OTel
-    OTel --> Jaeger
-    OTel --> Prometheus
+    Services -->|Traces/Metrics/Logs| OTel
+    Gateway -->|Traces/Metrics/Logs| OTel
+    OTel -->|Traces| Tempo
+    OTel -->|Metrics| Prometheus
+    OTel -->|Logs| Loki
+    Tempo --> Grafana
     Prometheus --> Grafana
+    Loki --> Grafana
 ```
 
 ### Service Responsibilities
@@ -97,12 +101,12 @@ graph TB
 - **Redis** (Port 16379): Distributed caching, session storage, performance optimization
 - **Kafka** (Port 19092): Event streaming, async communication, event-driven architecture
 
-#### Observability
+#### Observability (Grafana Stack)
 - **OpenTelemetry Collector**: Unified telemetry collection (traces, metrics, logs)
-- **Jaeger** (Port 16686): Distributed tracing, request flow visualization
+- **Tempo** (Port 3200): Distributed tracing backend, integrated with Grafana
 - **Prometheus** (Port 19090): Metrics collection and storage
-- **Grafana** (Port 3000): Metrics visualization, dashboards
 - **Loki** (Port 13100): Log aggregation and querying
+- **Grafana** (Port 3000): Unified observability UI (traces, metrics, logs)
 - **Kafka UI** (Port 19000): Kafka monitoring, topic/consumer management
 
 ## Technology Stack
@@ -116,7 +120,7 @@ graph TB
 - **PostgreSQL 15** - Relational database (separate instance per service)
 - **Redis 7** - Caching and session management
 - **Apache Kafka** - Event streaming and asynchronous messaging
-- **Monitoring**: Actuator, OpenTelemetry, Prometheus, Grafana, Loki, Jaeger
+- **Monitoring**: Actuator, OpenTelemetry, Prometheus, Grafana, Loki, Tempo
 - **Liquibase** - Database schema versioning
 - **Docker & Docker Compose** - Containerization and local orchestration
 - **Kubernetes & Helm** - Production deployment and orchestration
@@ -179,7 +183,7 @@ This command will:
 - Start Config Server with externalized configurations
 - Start all microservices with service discovery
 - Start API Gateway
-- Start observability stack (OTel, Jaeger, Prometheus, Grafana, Loki)
+- Start observability stack (OTel, Tempo, Prometheus, Grafana, Loki)
 - Run Liquibase migrations and seed test data
 
 **First startup may take 2-3 minutes** as services initialize, register with Consul, and run database migrations.
@@ -516,18 +520,38 @@ helm install skydive-forecast ./skydive-forecast \
 kubectl port-forward svc/gateway 8080:8080 -n skydive-forecast
 ```
 
+See [helm/README.md](helm/README.md) for detailed deployment guide.
+
+### AWS with Terraform (Production)
+
+The project includes Terraform configuration for AWS deployment:
+
+```bash
+cd terraform/aws
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your passwords
+
+terraform init
+terraform apply
+
+# Get ALB URL
+terraform output alb_dns_name
+```
+
+**Infrastructure**: VPC, ECS Fargate, RDS PostgreSQL (3 instances), ElastiCache Redis, ALB, ECR, CloudWatch
+
+See [terraform/aws/README.md](terraform/aws/README.md) for detailed deployment guide.
+
 ### Production Features
 - **High Availability**: 2+ replicas per service
-- **Auto-scaling**: HorizontalPodAutoscaler (CPU/Memory based)
+- **Auto-scaling**: HorizontalPodAutoscaler (Kubernetes) / ECS Auto Scaling (AWS)
 - **Health Checks**: Liveness and readiness probes
 - **Resource Limits**: CPU/Memory requests and limits
-- **Service Discovery**: Native Kubernetes DNS
-- **Load Balancing**: Kubernetes Services with session affinity
-- **Secrets Management**: Kubernetes Secrets for sensitive data
+- **Service Discovery**: Native Kubernetes DNS / AWS Cloud Map
+- **Load Balancing**: Kubernetes Services / AWS ALB
+- **Secrets Management**: Kubernetes Secrets / AWS Secrets Manager
 - **Rolling Updates**: Zero-downtime deployments
-- **Monitoring**: Prometheus ServiceMonitor integration
-
-See [helm/README.md](helm/README.md) for detailed deployment guide.
+- **Monitoring**: Prometheus + Grafana / CloudWatch
 
 ## Monitoring
 
@@ -561,9 +585,9 @@ The service includes comprehensive monitoring capabilities:
 - **Features**: Topics, messages, consumer groups, brokers, configurations
 - **Real-time**: Live message viewing and topic statistics
 
-### Distributed Tracing (Jaeger)
+### Distributed Tracing (Tempo)
 
-- **Endpoint**: `http://localhost:16686`
+- **Endpoint**: `http://localhost:3200`
 - **Traces**: Request flows across services with timing information
 - **Sampling**: 100% of requests traced (configurable)
 - **Features**: Service dependency graph, trace comparison, performance analysis
@@ -589,7 +613,7 @@ The service includes comprehensive monitoring capabilities:
   - Redis: 16379
   - Kafka: 19092, 29092
   - Zookeeper: 2181
-  - Monitoring: 3000 (Grafana), 19090 (Prometheus), 13100 (Loki), 16686 (Jaeger), 19000 (Kafka UI)
+  - Monitoring: 3000 (Grafana), 19090 (Prometheus), 13100 (Loki), 3200 (Tempo), 19000 (Kafka UI)
   - OpenTelemetry: 4317 (gRPC), 4318 (HTTP), 8889 (metrics)
 - Verify Docker has enough resources (4GB RAM minimum recommended)
 - Check logs: `docker-compose logs [service-name]`

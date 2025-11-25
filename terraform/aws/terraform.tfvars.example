@@ -1,0 +1,6 @@
+aws_region           = "eu-central-1"
+db_password_user     = "change-me"
+db_password_analysis = "change-me"
+db_password_location = "change-me"
+redis_password       = "change-me"
+jwt_secret           = "change-me-32-chars-minimum"
