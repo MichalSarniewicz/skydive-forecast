@@ -134,6 +134,12 @@ services:
       - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml
       - loki-data:/loki
     command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - skydive-network
 
@@ -223,6 +229,8 @@ services:
       - ../skydive-forecast-svc-config:/config-repo:ro
     environment:
       SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
       SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCHLOCATIONS: file:///config-repo/{application},file:///config-repo/shared
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8888/actuator/health"]
@@ -242,6 +250,8 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
       USER_SERVICE_URL: http://user-service:8081
       ANALYSIS_SERVICE_URL: http://analysis-service:8082
       LOCATION_SERVICE_URL: http://location-service:8083
@@ -283,6 +293,8 @@ services:
       - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: dev,consul
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/skydive_forecast_user_db
       SPRING_DATASOURCE_USERNAME: skydive_forecast_user
       SPRING_DATASOURCE_PASSWORD: pass
@@ -327,6 +339,8 @@ services:
       - "8082:8082"
     environment:
       SPRING_PROFILES_ACTIVE: dev,consul
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/skydive_forecast_analysis_db
       SPRING_DATASOURCE_USERNAME: skydive_forecast_analysis
       SPRING_DATASOURCE_PASSWORD: pass
@@ -376,6 +390,8 @@ services:
       - "8083:8083"
     environment:
       SPRING_PROFILES_ACTIVE: dev,consul
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-location:5432/skydive_forecast_location_db
       SPRING_DATASOURCE_USERNAME: skydive_forecast_location
       SPRING_DATASOURCE_PASSWORD: pass
