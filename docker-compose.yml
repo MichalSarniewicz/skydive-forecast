@@ -174,7 +174,6 @@ services:
     command: [ "-config.file=/etc/tempo.yaml" ]
     ports:
       - "3200:3200"   # Tempo HTTP
-      - "9411:9411"   # Zipkin compatibility
     volumes:
       - ./monitoring/tempo.yaml:/etc/tempo.yaml
       - tempo-data:/var/tempo
