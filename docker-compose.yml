@@ -284,6 +284,23 @@ services:
     networks:
       - skydive-network
 
+  liquibase-user:
+    build:
+      context: ../skydive-forecast-user-service
+      dockerfile: Dockerfile.liquibase
+    container_name: skydive-liquibase-user
+    volumes:
+      - ../skydive-forecast-user-service/src/main/resources:/liquibase/changelog:ro
+      - ../skydive-forecast-user-service/liquibase.properties:/liquibase/liquibase.properties:ro
+    command:
+      - --defaultsFile=/liquibase/liquibase.properties
+      - update
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+    networks:
+      - skydive-network
+
   user-service:
     build:
       context: ../skydive-forecast-user-service
@@ -299,8 +316,7 @@ services:
       SPRING_DATASOURCE_USERNAME: skydive_forecast_user
       SPRING_DATASOURCE_PASSWORD: pass
       SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: skydive_forecast_user
-      SPRING_LIQUIBASE_DEFAULT_SCHEMA: skydive_forecast_user
-      SPRING_LIQUIBASE_CONTEXTS: seed
+      SPRING_LIQUIBASE_ENABLED: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: pass
@@ -317,6 +333,8 @@ services:
         condition: service_healthy
       postgres-user:
         condition: service_healthy
+      liquibase-user:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -327,6 +345,23 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    networks:
+      - skydive-network
+
+  liquibase-analysis:
+    build:
+      context: ../skydive-forecast-analysis-service
+      dockerfile: Dockerfile.liquibase
+    container_name: skydive-liquibase-analysis
+    volumes:
+      - ../skydive-forecast-analysis-service/src/main/resources:/liquibase/changelog:ro
+      - ../skydive-forecast-analysis-service/liquibase.properties:/liquibase/liquibase.properties:ro
+    command:
+      - --defaultsFile=/liquibase/liquibase.properties
+      - update
+    depends_on:
+      postgres-analysis:
+        condition: service_healthy
     networks:
       - skydive-network
 
@@ -345,8 +380,7 @@ services:
       SPRING_DATASOURCE_USERNAME: skydive_forecast_analysis
       SPRING_DATASOURCE_PASSWORD: pass
       SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: skydive_forecast_analysis
-      SPRING_LIQUIBASE_DEFAULT_SCHEMA: skydive_forecast_analysis
-      SPRING_LIQUIBASE_CONTEXTS: seed
+      SPRING_LIQUIBASE_ENABLED: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: pass
@@ -368,6 +402,8 @@ services:
         condition: service_healthy
       postgres-analysis:
         condition: service_healthy
+      liquibase-analysis:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -378,6 +414,23 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    networks:
+      - skydive-network
+
+  liquibase-location:
+    build:
+      context: ../skydive-forecast-location-service
+      dockerfile: Dockerfile.liquibase
+    container_name: skydive-liquibase-location
+    volumes:
+      - ../skydive-forecast-location-service/src/main/resources:/liquibase/changelog:ro
+      - ../skydive-forecast-location-service/liquibase.properties:/liquibase/liquibase.properties:ro
+    command:
+      - --defaultsFile=/liquibase/liquibase.properties
+      - update
+    depends_on:
+      postgres-location:
+        condition: service_healthy
     networks:
       - skydive-network
 
@@ -396,8 +449,7 @@ services:
       SPRING_DATASOURCE_USERNAME: skydive_forecast_location
       SPRING_DATASOURCE_PASSWORD: pass
       SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: skydive_forecast_location
-      SPRING_LIQUIBASE_DEFAULT_SCHEMA: skydive_forecast_location
-      SPRING_LIQUIBASE_CONTEXTS: seed
+      SPRING_LIQUIBASE_ENABLED: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: pass
@@ -414,6 +466,8 @@ services:
         condition: service_healthy
       postgres-location:
         condition: service_healthy
+      liquibase-location:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
