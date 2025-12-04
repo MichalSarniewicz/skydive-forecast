@@ -393,9 +393,12 @@ resource "aws_ecs_task_definition" "analysis_service" {
       { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${aws_db_instance.analysis.endpoint}/skydive_forecast_analysis_db" },
       { name = "SPRING_DATASOURCE_USERNAME", value = "skydive_forecast_analysis" },
       { name = "SPRING_DATASOURCE_PASSWORD", value = var.db_password_analysis },
+      { name = "SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA", value = "skydive_forecast_analysis" },
       { name = "SPRING_DATA_REDIS_HOST", value = aws_elasticache_cluster.redis.cache_nodes[0].address },
+      { name = "SPRING_DATA_REDIS_PORT", value = "6379" },
       { name = "SPRING_DATA_REDIS_PASSWORD", value = var.redis_password },
       { name = "SPRING_KAFKA_BOOTSTRAP_SERVERS", value = aws_msk_cluster.kafka.bootstrap_brokers },
+      { name = "LOCATION_SERVICE_URL", value = "http://location-service.skydive-cluster.local:8083" },
       { name = "JWT_SECRET", value = var.jwt_secret }
     ]
     logConfiguration = {
@@ -455,7 +458,11 @@ resource "aws_ecs_task_definition" "gateway" {
     environment = [
       { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
       { name = "SPRING_DATA_REDIS_HOST", value = aws_elasticache_cluster.redis.cache_nodes[0].address },
-      { name = "SPRING_DATA_REDIS_PASSWORD", value = var.redis_password }
+      { name = "SPRING_DATA_REDIS_PORT", value = "6379" },
+      { name = "SPRING_DATA_REDIS_PASSWORD", value = var.redis_password },
+      { name = "USER_SERVICE_URL", value = "http://user-service.skydive-cluster.local:8081" },
+      { name = "ANALYSIS_SERVICE_URL", value = "http://analysis-service.skydive-cluster.local:8082" },
+      { name = "LOCATION_SERVICE_URL", value = "http://location-service.skydive-cluster.local:8083" }
     ]
     logConfiguration = {
       logDriver = "awslogs"

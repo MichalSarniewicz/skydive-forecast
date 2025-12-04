@@ -1,27 +1,27 @@
-{{- if .Values.userService.enabled }}
+{{- if .Values.locationService.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.userService.name }}
+  name: {{ .Values.locationService.name }}
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: {{ .Values.userService.name }}
+    app: {{ .Values.locationService.name }}
 spec:
-  replicas: {{ .Values.userService.replicaCount }}
+  replicas: {{ .Values.locationService.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Values.userService.name }}
+      app: {{ .Values.locationService.name }}
   template:
     metadata:
       labels:
-        app: {{ .Values.userService.name }}
+        app: {{ .Values.locationService.name }}
     spec:
       containers:
-      - name: {{ .Values.userService.name }}
-        image: "{{ .Values.userService.image.repository }}:{{ .Values.userService.image.tag }}"
+      - name: {{ .Values.locationService.name }}
+        image: "{{ .Values.locationService.image.repository }}:{{ .Values.locationService.image.tag }}"
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         ports:
-        - containerPort: {{ .Values.userService.service.port }}
+        - containerPort: {{ .Values.locationService.service.port }}
           name: http
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -29,21 +29,21 @@ spec:
         - name: SPRING_CLOUD_CONFIG_URI
           value: "http://{{ .Values.configServer.name }}:{{ .Values.configServer.service.port }}"
         - name: SPRING_DATASOURCE_URL
-          value: "jdbc:postgresql://postgresql:5432/skydive_forecast_user_db"
+          value: "jdbc:postgresql://postgresql:5432/skydive_forecast_location_db"
         - name: SPRING_DATASOURCE_USERNAME
           valueFrom:
             secretKeyRef:
               name: {{ .Values.secrets.name | default "skydive-secrets" }}
-              key: user-db-username
+              key: location-db-username
               optional: true
         - name: SPRING_DATASOURCE_PASSWORD
           valueFrom:
             secretKeyRef:
               name: {{ .Values.secrets.name | default "skydive-secrets" }}
-              key: user-db-password
+              key: location-db-password
               optional: true
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA
-          value: "skydive_forecast_user"
+          value: "skydive_forecast_location"
         - name: SPRING_DATA_REDIS_HOST
           value: "redis-master"
         - name: SPRING_DATA_REDIS_PORT
@@ -69,7 +69,7 @@ spec:
           value: "{{ .Values.observability.lokiUrl }}"
         {{- end }}
         resources:
-          {{- toYaml .Values.userService.resources | nindent 10 }}
+          {{- toYaml .Values.locationService.resources | nindent 10 }}
         livenessProbe:
           httpGet:
             path: /actuator/health

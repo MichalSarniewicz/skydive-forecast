@@ -34,6 +34,22 @@ spec:
           value: "http://{{ .Values.analysisService.name }}:{{ .Values.analysisService.service.port }}"
         - name: LOCATION_SERVICE_URL
           value: "http://{{ .Values.locationService.name }}:{{ .Values.locationService.service.port }}"
+        - name: SPRING_DATA_REDIS_HOST
+          value: "redis-master"
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.name | default "skydive-secrets" }}
+              key: redis-password
+              optional: true
+        {{- if .Values.observability.enabled }}
+        - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+          value: "{{ .Values.observability.otlpEndpoint }}"
+        - name: LOKI_URL
+          value: "{{ .Values.observability.lokiUrl }}"
+        {{- end }}
         resources:
           {{- toYaml .Values.gateway.resources | nindent 10 }}
         livenessProbe:

@@ -1,27 +1,27 @@
-{{- if .Values.userService.enabled }}
+{{- if .Values.analysisService.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.userService.name }}
+  name: {{ .Values.analysisService.name }}
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: {{ .Values.userService.name }}
+    app: {{ .Values.analysisService.name }}
 spec:
-  replicas: {{ .Values.userService.replicaCount }}
+  replicas: {{ .Values.analysisService.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Values.userService.name }}
+      app: {{ .Values.analysisService.name }}
   template:
     metadata:
       labels:
-        app: {{ .Values.userService.name }}
+        app: {{ .Values.analysisService.name }}
     spec:
       containers:
-      - name: {{ .Values.userService.name }}
-        image: "{{ .Values.userService.image.repository }}:{{ .Values.userService.image.tag }}"
+      - name: {{ .Values.analysisService.name }}
+        image: "{{ .Values.analysisService.image.repository }}:{{ .Values.analysisService.image.tag }}"
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         ports:
-        - containerPort: {{ .Values.userService.service.port }}
+        - containerPort: {{ .Values.analysisService.service.port }}
           name: http
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -29,21 +29,21 @@ spec:
         - name: SPRING_CLOUD_CONFIG_URI
           value: "http://{{ .Values.configServer.name }}:{{ .Values.configServer.service.port }}"
         - name: SPRING_DATASOURCE_URL
-          value: "jdbc:postgresql://postgresql:5432/skydive_forecast_user_db"
+          value: "jdbc:postgresql://postgresql:5432/skydive_forecast_analysis_db"
         - name: SPRING_DATASOURCE_USERNAME
           valueFrom:
             secretKeyRef:
               name: {{ .Values.secrets.name | default "skydive-secrets" }}
-              key: user-db-username
+              key: analysis-db-username
               optional: true
         - name: SPRING_DATASOURCE_PASSWORD
           valueFrom:
             secretKeyRef:
               name: {{ .Values.secrets.name | default "skydive-secrets" }}
-              key: user-db-password
+              key: analysis-db-password
               optional: true
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA
-          value: "skydive_forecast_user"
+          value: "skydive_forecast_analysis"
         - name: SPRING_DATA_REDIS_HOST
           value: "redis-master"
         - name: SPRING_DATA_REDIS_PORT
@@ -56,6 +56,8 @@ spec:
               optional: true
         - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
           value: "kafka:9092"
+        - name: LOCATION_SERVICE_URL
+          value: "http://{{ .Values.locationService.name }}:{{ .Values.locationService.service.port }}"
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
@@ -69,7 +71,7 @@ spec:
           value: "{{ .Values.observability.lokiUrl }}"
         {{- end }}
         resources:
-          {{- toYaml .Values.userService.resources | nindent 10 }}
+          {{- toYaml .Values.analysisService.resources | nindent 10 }}
         livenessProbe:
           httpGet:
             path: /actuator/health

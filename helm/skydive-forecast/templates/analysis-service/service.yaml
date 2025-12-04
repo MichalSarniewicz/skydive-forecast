@@ -1,0 +1,18 @@
+{{- if .Values.analysisService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.analysisService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.analysisService.name }}
+spec:
+  type: {{ .Values.analysisService.service.type }}
+  ports:
+  - port: {{ .Values.analysisService.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: {{ .Values.analysisService.name }}
+{{- end }}

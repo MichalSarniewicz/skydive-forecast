@@ -132,3 +132,29 @@ grafana:
     type: LoadBalancer
     port: 3000
   adminPassword: admin
+
+# Secrets configuration
+secrets:
+  name: skydive-secrets
+  # Create secret with: kubectl create secret generic skydive-secrets \
+  #   --from-literal=jwt-secret=hK8nX2mP9qR5vT3wL7bE4jY6cA1dF8sZ \
+  #   --from-literal=redis-password=pass \
+  #   --from-literal=user-db-username=skydive_forecast_user \
+  #   --from-literal=user-db-password=pass \
+  #   --from-literal=analysis-db-username=skydive_forecast_analysis \
+  #   --from-literal=analysis-db-password=pass \
+  #   --from-literal=location-db-username=skydive_forecast_location \
+  #   --from-literal=location-db-password=pass \
+  #   -n skydive-forecast
+
+# Observability configuration
+observability:
+  enabled: true
+  otlpEndpoint: "http://otel-collector:4318/v1/traces"
+  lokiUrl: "http://loki:3100/loki/api/v1/push"
+
+# Consul configuration (optional - for service discovery)
+consul:
+  enabled: false
+  host: consul
+  port: 8500
