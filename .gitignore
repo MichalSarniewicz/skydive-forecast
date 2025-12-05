@@ -5,6 +5,7 @@ target/
 .kotlin
 
 ### IntelliJ IDEA ###
+.idea
 .idea/modules.xml
 .idea/jarRepositories.xml
 .idea/compiler.xml
@@ -37,4 +38,35 @@ build/
 
 ### Mac OS ###
 .DS_Store
-/.idea/
+
+### Logs ###
+*.log
+*.pid
+
+### Local configs ###
+application-local.*
+*-local.yml
+*-local.yaml
+*-local.properties
+
+### Secrets ###
+*.env
+*.key
+*.pem
+*.p12
+*.jks
+*.pfx
+*-secret.*
+secrets/
+
+### Terraform ###
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+terraform.rc
+.terraformrc
+
+### Docker ###
+docker-compose.override.yml
