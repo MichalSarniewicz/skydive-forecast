@@ -1,6 +1,29 @@
 server:
   http_listen_port: 3200
 
+memberlist:
+  abort_if_cluster_join_fails: false
+  bind_port: 7946
+  join_members:
+    - skydive-tempo:7946
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: docker-compose
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+  ring:
+    kvstore:
+      store: inmemory
+
+overrides:
+  metrics_generator_processors: [service-graphs, span-metrics, local-blocks]
+
 distributor:
   receivers:
     otlp:

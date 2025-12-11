@@ -16,7 +16,7 @@ exporters:
     endpoint: tempo:4317
     tls:
       insecure: true
-  
+
   prometheus:
     endpoint: "0.0.0.0:8889"
     namespace: skydive_forecast
@@ -30,7 +30,7 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [otlp/tempo, debug]
-    
+
     metrics:
       receivers: [otlp]
       processors: [batch]

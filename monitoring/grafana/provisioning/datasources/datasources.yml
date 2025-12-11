@@ -19,6 +19,10 @@ datasources:
     editable: true
     jsonData:
       maxLines: 1000
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "\"traceId\":\"(\\w+)\""
+          name: TraceID
 
   - name: Tempo
     type: tempo

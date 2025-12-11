@@ -28,7 +28,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{job=~\".+\"}",
+          "expr": "{app=~\".+\"}",
           "refId": "A"
         }
       ],
