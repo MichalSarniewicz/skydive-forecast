@@ -211,7 +211,27 @@ Individual service documentation:
 - Analysis Service: http://localhost:8082/swagger-ui.html
 - Location Service: http://localhost:8083/swagger-ui.html
 
+### 5. Test with Postman
+
+For API testing, import the complete Postman collection:
+
+1. Open Postman
+2. Import files from `postman/` directory:
+   - `Skydive-Forecast-API.postman_collection.json` (39 endpoints)
+   - `Skydive-Forecast-Local.postman_environment.json` (environment variables)
+3. Select "Skydive Forecast - Local" environment
+4. Run `Authentication > Login (Admin)` to get JWT token (auto-saved)
+5. Test any endpoint
+
 ## API Documentation
+
+### Postman Collection
+
+**Quick Start**: Import the complete Postman collection from `postman/` directory for instant API testing.
+
+- **Collection**: `postman/Skydive-Forecast-API.postman_collection.json`
+- **Environment**: `postman/Skydive-Forecast-Local.postman_environment.json`
+- **Total Endpoints**: 39 (Authentication, Users, Roles, Permissions, Dropzones, Weather Reports)
 
 ### Main Endpoints
 

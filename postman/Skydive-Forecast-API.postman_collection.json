@@ -1,0 +1,1049 @@
+{
+	"info": {
+		"_postman_id": "skydive-forecast-api",
+		"name": "Skydive Forecast API",
+		"description": "Complete API collection for Skydive Forecast microservices system. Includes authentication, user management, location management, and weather analysis endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('jwt_token', jsonData.token);",
+									"    pm.collectionVariables.set('refresh_token', jsonData.refreshToken);",
+									"    console.log('JWT Token saved:', jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@skydive.com\",\n  \"password\": \"Admin123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/auth/token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"auth",
+								"token"
+							]
+						},
+						"description": "Login with admin credentials and automatically save JWT token"
+					},
+					"response": []
+				},
+				{
+					"name": "Login (User)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('jwt_token', jsonData.token);",
+									"    pm.collectionVariables.set('refresh_token', jsonData.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@skydive.com\",\n  \"password\": \"User123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/auth/token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"auth",
+								"token"
+							]
+						},
+						"description": "Login with regular user credentials"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('jwt_token', jsonData.token);",
+									"    pm.collectionVariables.set('refresh_token', jsonData.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Refresh JWT token using refresh token"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for JWT token generation and refresh"
+		},
+		{
+			"name": "User Management",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users"
+							]
+						},
+						"description": "Retrieve list of all users (requires USER_VIEW permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users"
+							]
+						},
+						"description": "Create new user (requires USER_CREATE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Smith\",\n  \"email\": \"john.smith@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"1"
+							]
+						},
+						"description": "Update user information (requires USER_EDIT permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"active\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/1/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"1",
+								"status"
+							]
+						},
+						"description": "Activate or deactivate user (requires USER_STATUS_UPDATE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"OldPass123!\",\n  \"newPassword\": \"NewPass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"me",
+								"password"
+							]
+						},
+						"description": "Change current user password (requires USER_PASSWORD_CHANGE permission)"
+					},
+					"response": []
+				}
+			],
+			"description": "User management endpoints"
+		},
+		{
+			"name": "Roles",
+			"item": [
+				{
+					"name": "Get All Roles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/roles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"roles"
+							]
+						},
+						"description": "Retrieve all roles in the system"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Role",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/roles?role-name=INSTRUCTOR",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"roles"
+							],
+							"query": [
+								{
+									"key": "role-name",
+									"value": "INSTRUCTOR"
+								}
+							]
+						},
+						"description": "Create a new role"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/roles/3",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"roles",
+								"3"
+							]
+						},
+						"description": "Delete a role by ID (ADMIN role cannot be deleted)"
+					},
+					"response": []
+				}
+			],
+			"description": "Role management endpoints"
+		},
+		{
+			"name": "Permissions",
+			"item": [
+				{
+					"name": "Get All Permissions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/permissions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"permissions"
+							]
+						},
+						"description": "Retrieve all permissions (requires PERMISSION_VIEW)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Permission",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"CUSTOM_PERMISSION\",\n  \"description\": \"Custom permission description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/permissions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"permissions"
+							]
+						},
+						"description": "Create new permission (requires PERMISSION_CREATE)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Permission",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"UPDATED_PERMISSION\",\n  \"description\": \"Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/permissions/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"permissions",
+								"1"
+							]
+						},
+						"description": "Update permission (requires PERMISSION_UPDATE)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Permission",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/permissions/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"permissions",
+								"1"
+							]
+						},
+						"description": "Delete permission (requires PERMISSION_DELETE)"
+					},
+					"response": []
+				}
+			],
+			"description": "Permission management endpoints"
+		},
+		{
+			"name": "Role Permissions",
+			"item": [
+				{
+					"name": "Get All Role Permissions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/role-permissions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"role-permissions"
+							]
+						},
+						"description": "Get all role-permission mappings (requires ROLE_PERMISSION_VIEW)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permissions by Role",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/role-permissions/role/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"role-permissions",
+								"role",
+								"1"
+							]
+						},
+						"description": "Get all permissions for a specific role"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permission Codes by Role",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/role-permissions/role/1/permission-codes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"role-permissions",
+								"role",
+								"1",
+								"permission-codes"
+							]
+						},
+						"description": "Get permission codes for a role"
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Permission to Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roleId\": 2,\n  \"permissionId\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/role-permissions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"role-permissions"
+							]
+						},
+						"description": "Assign permission to role (requires ROLE_PERMISSION_CREATE)"
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Multiple Permissions to Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roleId\": 2,\n  \"permissionIds\": [1, 2, 3, 4, 5]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/role-permissions/assign",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"role-permissions",
+								"assign"
+							]
+						},
+						"description": "Assign multiple permissions to role (replaces existing)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role Permission",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/role-permissions/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"role-permissions",
+								"1"
+							]
+						},
+						"description": "Delete specific role-permission mapping"
+					},
+					"response": []
+				}
+			],
+			"description": "Role-Permission relationship management"
+		},
+		{
+			"name": "User Roles",
+			"item": [
+				{
+					"name": "Get All User Roles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user-roles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user-roles"
+							]
+						},
+						"description": "Get all user-role assignments (requires USER_ROLE_VIEW_ALL)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Roles for User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user-roles/user/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user-roles",
+								"user",
+								"1"
+							]
+						},
+						"description": "Get all roles for specific user"
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Role to User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 3,\n  \"roleId\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user-roles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user-roles"
+							]
+						},
+						"description": "Assign role to user (requires USER_ROLE_ASSIGN)"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Role from User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user-roles/user/3/role/2",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user-roles",
+								"user",
+								"3",
+								"role",
+								"2"
+							]
+						},
+						"description": "Remove role from user (requires USER_ROLE_REMOVE)"
+					},
+					"response": []
+				}
+			],
+			"description": "User-Role assignment management"
+		},
+		{
+			"name": "Dropzones",
+			"item": [
+				{
+					"name": "Get All Dropzones",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/locations/dropzones",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"locations",
+								"dropzones"
+							]
+						},
+						"description": "Get all dropzones (requires DROPZONE_VIEW permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dropzone by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/locations/dropzones/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"locations",
+								"dropzones",
+								"1"
+							]
+						},
+						"description": "Get dropzone details by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dropzones by City",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/locations/dropzones/city/Warsaw",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"locations",
+								"dropzones",
+								"city",
+								"Warsaw"
+							]
+						},
+						"description": "Find dropzones by city name"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Dropzone",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Sky High Dropzone\",\n  \"city\": \"Warsaw\",\n  \"country\": \"Poland\",\n  \"latitude\": 52.2297,\n  \"longitude\": 21.0122,\n  \"elevation\": 100.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/locations/dropzones",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"locations",
+								"dropzones"
+							]
+						},
+						"description": "Create new dropzone (requires DROPZONE_CREATE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Dropzone",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Sky High Dropzone Updated\",\n  \"city\": \"Warsaw\",\n  \"country\": \"Poland\",\n  \"latitude\": 52.2297,\n  \"longitude\": 21.0122,\n  \"elevation\": 105.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/locations/dropzones/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"locations",
+								"dropzones",
+								"1"
+							]
+						},
+						"description": "Update dropzone (requires DROPZONE_UPDATE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Dropzone",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/locations/dropzones/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"locations",
+								"dropzones",
+								"1"
+							]
+						},
+						"description": "Delete dropzone (requires DROPZONE_DELETE permission)"
+					},
+					"response": []
+				}
+			],
+			"description": "Dropzone location management endpoints"
+		},
+		{
+			"name": "Weather Reports",
+			"item": [
+				{
+					"name": "Request Weather Report",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 202) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('report_id', jsonData.reportId);",
+									"    console.log('Report ID saved:', jsonData.reportId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analyses/reports/request",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analyses",
+								"reports",
+								"request"
+							]
+						},
+						"description": "Request async weather report generation (requires REPORT_CREATE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Weather Report by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analyses/reports/{{report_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analyses",
+								"reports",
+								"{{report_id}}"
+							]
+						},
+						"description": "Get weather report by ID (requires REPORT_VIEW permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All User Reports",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analyses/reports",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analyses",
+								"reports"
+							]
+						},
+						"description": "Get all reports for authenticated user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Latest Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analyses/reports/latest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analyses",
+								"reports",
+								"latest"
+							]
+						},
+						"description": "Get latest report for authenticated user"
+					},
+					"response": []
+				}
+			],
+			"description": "Weather report generation and retrieval (async via Kafka)"
+		}
+	]
+}
