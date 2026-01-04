@@ -145,10 +145,28 @@ graph TB
 
 ## Prerequisites
 
+- **Linux** / **macOS** / **Windows** (WSL or Git Bash)
 - **Docker**  installed
 - **Git** for cloning repositories
 - **Java 21** (if running services locally without Docker)
 - **Maven 3.x** (if building locally)
+- **Make** (optional, for simplified commands)
+
+## Makefile Commands
+
+A `Makefile` is included for simplified project management:
+
+| Command | Description |
+|---------|-------------|
+| `make start` | Start all services |
+| `make stop` | Stop all services |
+| `make logs` | Follow logs of all services |
+| `make test` | Run tests for all services |
+| `make build` | Build all Docker images |
+| `make status` | Show status of containers |
+| `make clean` | Stop and remove containers and volumes |
+
+Run `make help` to see all available commands.
 
 ## Quick Start
 
