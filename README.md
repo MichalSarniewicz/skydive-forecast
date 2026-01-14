@@ -5,39 +5,28 @@
 [![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2025.0.0-brightgreen)](https://spring.io/projects/spring-cloud)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-
 ## Overview
 
-A production-grade microservices application that analyzes weather data across multiple dropzones and uses AI to
-recommend optimal skydiving locations. The system showcases modern backend development practices with Spring Boot,
-event-driven architecture using Kafka, distributed tracing, and CI/CD pipelines. Includes complete infrastructure setup
-with Docker Compose for local development and deployment configurations for both Kubernetes and AWS.
+A microservices application that analyzes weather data across multiple dropzones and uses AI to recommend optimal skydiving locations. Built with Spring Boot, Kafka event-driven architecture, distributed tracing, and complete CI/CD pipelines. Includes Docker Compose for local development and deployment configurations for Kubernetes and AWS.
 
 ### Status: **In Development**
 
 ## Features
 
-- **Weather Analysis**: Comprehensive analysis of individual weather parameters (wind speed, wind direction,
-  temperature, precipitation, cloud coverage, visibility) across multiple dropzones. Includes scoring system for each
-  parameter, risk assessment for skydiving conditions, cross-dropzone comparisons, and automated report generation.
-- **AI-Powered Analysis**: Integration with OpenAI to generate natural language summaries and intelligent conclusions.
-  AI analyzes weather data across all dropzones to recommend the optimal location for skydiving at any given time based
-  on current conditions.
-- **Microservices Architecture**: Modular design with dedicated services for Users, Analysis, Locations, and Gateway.
-- **Security**: Robust JWT-based authentication and Role-Based Access Control (RBAC).
-- **Event-Driven**: Asynchronous communication and report generation using Apache Kafka.
-- **Service Discovery**: Dynamic service registration and discovery using Consul.
-- **Observability**: Complete monitoring stack with Grafana, Prometheus, Loki, Tempo, and OpenTelemetry.
-- **Production Ready**: Deployment configurations for both Kubernetes (Helm) and AWS (Terraform).
-- **CI/CD**: Automated pipelines with unit and integration testing using Testcontainers, security scanning, Docker image
-  building, and registry deployment. Each microservice has dedicated GitHub Actions workflows.
-- **User Management**: Complete user lifecycle management with registration, authentication, profile updates, password
-  changes, and account activation/deactivation. Role and permission management with flexible RBAC system for
-  fine-grained access control.
-
+- **Weather Analysis**: Comprehensive analysis of weather parameters (wind speed/direction, temperature, precipitation, cloud coverage, visibility) with scoring system, risk assessment, cross-dropzone comparisons, and automated report generation.
+- **AI-Powered Recommendations**: OpenAI integration for natural language summaries and intelligent dropzone recommendations based on current weather conditions.
+- **Microservices Architecture**: Dedicated services for Users, Analysis, Locations, and Gateway.
+- **Security**: JWT-based authentication with Role-Based Access Control (RBAC).
+- **Event-Driven**: Asynchronous communication using Apache Kafka.
+- **Service Discovery**: Dynamic service registration via Consul.
+- **Configuration Management**: Centralized configuration with Spring Cloud Config Server. External configuration repository for environment-specific settings.
+- **Observability**: Monitoring with Grafana, Prometheus, Loki, Tempo, and OpenTelemetry.
+- **Production Ready**: Kubernetes (Helm) and AWS (Terraform) deployment configurations.
+- **CI/CD**: Automated pipelines with Testcontainers testing, security scanning, Docker builds, and registry deployment via GitHub Actions.
+- **User Management**: Full user lifecycle (registration, authentication, profile updates, password management, activation/deactivation) with flexible RBAC for fine-grained access control.
 ## Architecture
 
-The system follows a microservices architecture with clear separation of concerns:
+The system follows a microservices architecture with a clear separation of concerns:
 
 ```mermaid
 graph TB
@@ -245,7 +234,7 @@ This command will:
 Reference for checking container status:
 
 ![Docker Compose Status](docs/screenshots/docker-compose.png)
-*Docker Compose stack showing ~21 active containers. Note: 3 Liquibase containers will exit gracefully (Exit 0) after
+*Docker Compose stack showing 21 active containers. Note: 3 Liquibase containers will exit gracefully (Exit 0) after
 database migrations complete.*
 
 ### 3. Verify Services
@@ -293,8 +282,8 @@ The project includes a comprehensive observability stack accessible via Grafana.
 ![Grafana Dashboards](docs/screenshots/grafana-dashboards.png)
 *Grafana Dashboards*
 
-![Report Generation Metrics](docs/screenshots/grafana-dashboard-raport-generation.png)
-*Exapmple dasboard: Report Generation Stats*
+![Report Generation Metrics](docs/screenshots/grafana-dashboard-example.png)
+*Example dasboard: System health*
 
 ### Distributed Tracing (Tempo)
 
@@ -321,6 +310,17 @@ The project includes a comprehensive observability stack accessible via Grafana.
 - **Total Endpoints**: 39 (Authentication, Users, Roles, Permissions, Dropzones, Weather Reports)
 
 ![Postman Collection](docs/screenshots/postman.png)
+
+### Aggregated Swagger
+
+**Interactive API Documentation**: The API Gateway aggregates OpenAPI documentation from all microservices into a
+unified Swagger UI.
+
+- **Aggregated Swagger UI**: `http://localhost:8080/swagger-ui.html`
+- **OpenAPI Specification**: `http://localhost:8080/v3/api-docs`
+- **Total Endpoints**: 39 (Authentication, Users, Roles, Permissions, Dropzones, Weather Reports)
+
+![Swagger Collection](docs/screenshots/swagger.png)
 
 ### Main Endpoints
 
@@ -567,14 +567,28 @@ cd terraform/aws && terraform apply
 
 - Favourite Dropzones
 - Wingsuit-specific report customizations
-- Push notifications when async reports complete
+- Push notifications when async reports are complete
 - Scheduled recurring weather reports
 
-## Known Technical Limitations
+## Known Limitations
 
-- **Cold Start**: Initial request latency due to JVM warm-up (mitigated in production with replicas).
-- **Service Dependency**: Analysis Service strictly requires Kafka; no fallback for synchronous processing yet.
+There are limitations in the project, some of which are due to a lack of time for implementation. Some technologies do not make sense in a project of this size. They are only there to showcase certain skills in the portfolio. This section lists those that I am aware of.
+
+### Business Features
+
+- **Business Features**: Some features are not implemented due to time constraints.
+- **No real-time push notifications** users must poll for async report completion (no SSE implemented yet).
+- **No scheduled reports** - reports are generated on-demand.
+- **No favourite dropzones** - users can only generate reports for all dropzones.
+- **No wingsuit-specific reports** - similar reports are generated for all users, not for ones with special expectations.
+
+### Technical
+
+- **Observability stack overhead:** 21 containers running locally - high RAM/CPU usage on typical developer machines.
+- **Cold starts / initial latency** — JVM warm-up + service registration in Consul + database migrations can cause noticeable delays on first requests after restart (especially in local Docker Compose).
 - **Data Persistence**: Local Docker Compose uses named volumes; `docker-compose down -v` wipes data.
+- **Testing complexity** — Integration testing across microservices + Kafka + multiple DBs requires use of Testcontainers → slow & resource-intensive test suites. 
+- **Complex cross-service queries** — Impossible to run SQL JOINs across User DB, Analysis DB, Location DB → reporting/analytics across domains requires additional aggregation services or data duplication.
 
 ## Troubleshooting
 
